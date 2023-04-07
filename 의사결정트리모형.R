@@ -64,9 +64,3 @@ while(cp >= 0.001){
   
   cp <- cp * 0.1
 }
-
-for(i in 1:3) {
-  cp = 0.1^i
-  filename <- cat("cp",cp,"result")
-  write.csv(result_matrix[i,,],filename)
-}
