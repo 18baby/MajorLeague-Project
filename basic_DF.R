@@ -1,5 +1,4 @@
-
-# 기본 데이터 전처리 -> 널값 제거 (4/12)
+# 기본 데이터 전처리 -> 널값 제거 (4/13)
 
 #install.packages("tidyr")
 library(dplyr)
