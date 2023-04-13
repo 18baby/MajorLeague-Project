@@ -1,3 +1,4 @@
+
 # 기본 데이터 전처리 -> 널값 제거 (4/12)
 
 #install.packages("tidyr")

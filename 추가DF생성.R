@@ -1,12 +1,18 @@
+# 수정(4/13)
+
+
 # 분석할 데이터 프레임 생성
-install.packages("ggplot2")
-install.packages("caret")
 install.packages("vctrs")
+install.packages("ggplot2")
+install.packages("caret", dependencies = TRUE)
 library(ggplot2)
 library(caret)
 
-df = lFinal.df    # 기존 데이터
+setwd("D:/R/데이터마이닝/baseball_project/R")
 
+df = lFinal_df    # 기존 데이터
+df = df[, -1]
+head(df)
 
 # DF1 (논문 추가 지표) -> [6개 지표 추가]
 df1 = df
@@ -49,8 +55,8 @@ df1[df1$ERAP == Inf & df1$l_G < 10, "ERAP"] = quantile(df1$ERAP, 0.75, na.rm=T) 
 df1[df1$ERAP == Inf & df1$l_G >= 10, "ERAP"] = quantile(df1$ERAP, 0.25, na.rm=T)   # 10경기 이상 -> 1분위수
 
 summary(df1)
-df1 = df1[, -1]
-
+df1
+str(df1)
 
 # DF2
 col_names = c("teamID", "lgID", "birthCountry", "throws", "divID")
@@ -63,13 +69,16 @@ data2 = data.frame(predict(dummy, newdata = df2[-1]))
 
 
 # DF3 (모든 열 표준화)
-df3 = df[, -1:-2]
-df3 = scale(df3)
-df3 = as.data.frame(df3)
+temp = df[, -1]
+df3 = temp[, !colnames(temp) %in% c("salary")]
+df3 = as.data.frame(scale(df3))
+df3$salary = df$salary
+str(df3)
+summary(df3)
 
 
 # DF4 (PCA 적용) -> 표준화 디폴트로 적용
-df4 = df[, -1:-2]
+df4 = df[, -1]
 str(df4)
 salary = df4$salary    # target값 추출
 df4 = subset(df4, select = -salary)   # feature들만 pca 진행
@@ -80,7 +89,7 @@ df_pca_eigen = df_pca$sdev^2          # 주성분들의 고유값을 확인
 selected_pca = df_pca_eigen[df_pca_eigen > 1]  # 고유값이 1보다 큰 주성분들만 추출
 n = length(selected_pca); n
 df4 = predict(df_pca, newdata = df4)
-df4 = as.data.frame(df4[, 1:n])    # 14개의 변수만 가짐
+df4 = as.data.frame(df4[, 1:n])    # 15개의 변수만 가짐
 df4$salary = salary
 
 colSums(is.na(df1))
@@ -88,8 +97,7 @@ colSums(is.na(df3))
 colSums(is.na(df4))
 
 # 최종 DF 확인
-write.csv(df1, 'df1.csv')
-write.csv(df2, 'df2.csv')
-write.csv(df3, 'df3.csv')
-write.csv(df4, 'df4.csv')
-
+write.csv(df1, 'Data_pre/df1.csv')
+#write.csv(df2, 'Data_pre/df2.csv')
+write.csv(df3, 'Data_pre/df3.csv')
+write.csv(df4, 'Data_pre/df4.csv')
