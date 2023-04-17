@@ -1,4 +1,5 @@
-# 기본 데이터 전처리 -> 널값 제거 (4/13)..
+
+# 기본 데이터 전처리 -> 널값 제거 (4/12)
 
 #install.packages("tidyr")
 library(dplyr)
@@ -58,3 +59,19 @@ colSums(is.na(lFinal.df))
 
 # 최종 데이터 프레임 저장
 write.csv(lFinal.df, 'D:/R/데이터마이닝/baseball_project/lFinal_df.csv')
+
+
+# salary 분포 확인
+library(tidyverse)
+
+attach(lFinal_df)
+summary(salary)
+hist(salary)    # 극단값 처리 문제..
+boxplot(salary ~ teamID)
+boxplot(salary ~ yearID)
+boxplot(salary ~ lgID)
+boxplot(salary ~ round)
+boxplot(salary ~ stint)
+boxplot(salary ~ n_award)
+boxplot(salary ~ l_W)
+boxplot(salary ~ l_L)
