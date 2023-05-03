@@ -22,7 +22,7 @@ lFinal.df[lFinal.df$l_ERA == Inf, c("playerID", "yearID", "l_ER", "l_IPouts")]
 lFinal.df[is.na(lFinal.df$l_ERA), c("playerID", "yearID", "l_ER", "l_IPouts")]  
 third = quantile(lFinal.df$l_ERA, 0.75, na.rm=T)
 lFinal.df[is.na(lFinal.df$l_ERA), "l_ERA"] = third   # NA값 3분위수로 채우기
-lFinal.df[lFinal.df$l_IPouts == 0, "l_ERA"] = 200    # 무한대값 -> 200으로 채우기
+lFinal.df[lFinal.df$l_IPouts == 0, "l_ERA"] = 99.99    # 무한대값 -> 200으로 채우기
 
 # 3. 나머지 데이터 -> 0으로 채우기
 col_names = colnames(aPitchingPost)
@@ -35,7 +35,7 @@ colSums(is.na(lFinal.df))
 
 # 4. po_에서 Inf값인 선수 처리
 lFinal.df[lFinal.df$po_ERA == Inf, c("playerID", "yearID", "po_ER", "po_IPouts")]
-lFinal.df[lFinal.df$po_ERA == Inf, "po_ERA"] = 200
+lFinal.df[lFinal.df$po_ERA == Inf, "po_ERA"] = 99.99
 
 # 5. po_ 에서 NA값 채우기
 lFinal.df[(lFinal.df$po_ER == 0) & (lFinal.df$po_IPouts == 0), c("playerID", "yearID", "po_ER", "po_IPouts")]
@@ -59,7 +59,7 @@ colSums(is.na(lFinal.df))
 
 # 최종 데이터 프레임 저장
 write.csv(lFinal.df, 'D:/R/데이터마이닝/baseball_project/lFinal_df.csv')
-
+write.csv(lFinal.df, 'lFinal_df.csv')
 
 # salary 분포 확인
 library(tidyverse)
