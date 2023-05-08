@@ -1,17 +1,18 @@
-# 수정(4/13)
+# 수정(5/8)
 
 
 # 분석할 데이터 프레임 생성
-install.packages("vctrs")
-install.packages("ggplot2")
-install.packages("caret", dependencies = TRUE)
+#install.packages("vctrs")
+#install.packages("ggplot2")
+#install.packages("caret", dependencies = TRUE)
 library(ggplot2)
 library(caret)
+library(tidyr)
 
-setwd("D:/R/데이터마이닝/baseball_project/R")
+setwd("D:/R/datamining/baseball_project/R")
 
-df = lFinal_df    # 기존 데이터
-df = df[, -1]
+df = lFinal_df_last_[-1]        # 기존 데이터
+removed_name_df = df[, -1]      # 이름 제거한 기존 데이터
 head(df)
 
 # DF1 (논문 추가 지표) -> [6개 지표 추가]
@@ -36,29 +37,31 @@ df1$BSR = (A*B)/(B+C) + D
 # 투수 WAR는 계산식을 모르겠음..
 detach(df1)
 summary(df1)
+
+# ***새로 대입한 값 이상치 처리***
 # Inf 값은 3분위수로 채움 -> (최대값으로 넣어도 괜찮음)
 t1 = quantile(df1$WHIP, 0.75, na.rm=T)
 t2 = quantile(df1$FIP, 0.75, na.rm=T)
 t3 = quantile(df1$ERC, 0.75, na.rm=T)
 # WHIP, FIP, ERC는 모두 IPouts = 0 인 사람으로 인해 발생한 문제!! -> t1, t2, t3로 대체
-df1[df1$WHIP == Inf, c("playerID", "yearID", "l_IPouts")]
+df1[df1$WHIP == Inf, c("yearID", "l_IPouts")]
 df1[df1$WHIP == Inf, "WHIP"] = t1
-df1[df1$FIP == Inf, c("playerID", "yearID", "l_IPouts")]
+df1[df1$FIP == Inf, c("yearID", "l_IPouts")]
 #df1[is.na(df1$FIP), c("l_HR","l_HBP","l_IBB", "l_SO","l_IPouts")]
 df1[is.na(df1$FIP), "FIP"] = t2
 df1[df1$FIP == Inf, "FIP"] = t2
-df1[df1$ERC == Inf, c("playerID", "yearID", "l_IPouts")]
+df1[df1$ERC == Inf, c("yearID", "l_IPouts")]
 df1[df1$ERC == Inf, "ERC"] = t3
 # ERAP는 Inf값이 많아서 추가 조작 필요
-df1[df1$ERAP == Inf, c("playerID", "yearID", "l_ERA", "l_G")]   # 10경기 이하, 이상을 구분
+df1[df1$ERAP == Inf, c("yearID", "l_ERA", "l_G")]   # 10경기 이하, 이상을 구분
 df1[df1$ERAP == Inf & df1$l_G < 10, "ERAP"] = quantile(df1$ERAP, 0.75, na.rm=T)    # 10경기 미만 -> 3분위수
 df1[df1$ERAP == Inf & df1$l_G >= 10, "ERAP"] = quantile(df1$ERAP, 0.25, na.rm=T)   # 10경기 이상 -> 1분위수
-
 summary(df1)
 df1
 str(df1)
 
-# DF2
+
+# DF2 [모든 범주형 변수 원핫 인코딩]
 col_names = c("teamID", "lgID", "birthCountry", "throws", "divID")
 df2 = df
 for(col in col_names) {
@@ -66,38 +69,58 @@ for(col in col_names) {
 }
 dummy  = dummyVars("~.", data = df2[-1])
 data2 = data.frame(predict(dummy, newdata = df2[-1]))
+df2 = data2
+
+# DF5 필요 없는 변수 제거 + 변수별 전처리
+df5 = removed_name_df
+attach(df5)
+  # 중간계투로 던진 경기 추가 -> 총 경기수 제거
+df5$l_GM = l_G - l_GS   
+
+  # 관중수 범주화 -> 4분위수 기준 순서화
+boxplot(attendance)
+hist(attendance)
+Q = quantile(df5$attendance)
+df5$attendance.f[attendance < Q[2]] = 0
+df5$attendance.f[(Q[2] <= attendance) & (attendance < Q[3])] = 1
+df5$attendance.f[(Q[3] <= attendance) & (attendance < Q[4])] = 2
+df5$attendance.f[Q[4] <= attendance] = 3
+summary(df5$attendance.f)
+  
+  # 연도 데이터 변경
+df5$career = yearID - debut         # 선수의 연차 정보
+df5$years_old = yearID - birthYear  # 당시 선수 나이
+
+  # stint 이진화
+df5$stint.f[stint > 1] = 2    # 시즌 중 이적이 있는 경우
+df5$stint.f[stint == 1] = 1   # 시즌 중 이적이 없는 경우
+
+  # 쓸모 없음 or 수정한 열 제거
+df5 = subset(df5, select = -c(lgID, divID, G, l_G, attendance, debut, birthYear, birthCountry, teamID, throws, stint)) 
+
+  # 원핫 인코딩 진행  -> 팀ID, 던지는 방향
+df5$teamID = as.factor(teamID)
+df5$throws = as.factor(throws)
+df5 = as.data.frame(dummyVars(~., data = df5) %>% predict(newdata= df5))
 
 
-# DF3 (모든 열 표준화)
-temp = df[, -1]
-df3 = temp[, !colnames(temp) %in% c("salary")]
-df3 = as.data.frame(scale(df3))
-df3$salary = df$salary
-str(df3)
-summary(df3)
 
 
-# DF4 (PCA 적용) -> 표준화 디폴트로 적용
-df4 = df[, -1]
-str(df4)
-salary = df4$salary    # target값 추출
-df4 = subset(df4, select = -salary)   # feature들만 pca 진행
-str(df4)
-df_pca = prcomp(df4, scale = TRUE)    # PCA 진행
-
-df_pca_eigen = df_pca$sdev^2          # 주성분들의 고유값을 확인
-selected_pca = df_pca_eigen[df_pca_eigen > 1]  # 고유값이 1보다 큰 주성분들만 추출
-n = length(selected_pca); n
-df4 = predict(df_pca, newdata = df4)
-df4 = as.data.frame(df4[, 1:n])    # 15개의 변수만 가짐
-df4$salary = salary
-
-colSums(is.na(df1))
-colSums(is.na(df3))
-colSums(is.na(df4))
+hist(df$stint)
+hist(df$teamID)
+hist(df$lgID)
+hist(df$divID)
+hist(df$birthCountry)
+summary(df$l_ERA)
+plot(df$birthCountry, df$salary)
+plot(df$throws, df$salary)
+plot(df$stint, df$salary)
 
 # 최종 DF 확인
 write.csv(df1, 'Data_pre/df1.csv')
-#write.csv(df2, 'Data_pre/df2.csv')
-write.csv(df3, 'Data_pre/df3.csv')
-write.csv(df4, 'Data_pre/df4.csv')
+write.csv(df2, 'Data_pre/df2.csv')
+write.csv(df5, 'Data_pre/df5.csv')
+
+summary(df$salary)
+
+
