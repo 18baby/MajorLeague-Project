@@ -110,7 +110,31 @@ make_basicDF.fun = function(DF){
 
 # 변수선택법 적용 DF 추가 필요
 
+
 # 시계열 DF 생성 함수 추가 필요
+library(plyr)
+library(data.table)
+
+make_DF6.fun = function(df_basic, lFinal_df_last_){
+  attach(df_basic)
+  attach(lFinal_df_last_)
+
+  AAA.df = cbind(df_basic, lFinal_df_last_[,'playerID'])
+  nm1 = c('WHIP', 'FIP', 'ERC', 'ERAP', 'kwERA', 'BSR', 'round', 'Rank', 'attendance.f','l_GM','salary')
+  nm2 = paste("b1", nm1, sep = ".")                       
+  setDT(AAA.df)  
+  siga.df = AAA.df[, (nm2) := shift(.SD), by=playerID, .SDcols=nm1]           # 1년전 데이터 추가
+  
+  nm3 = paste("b2", nm1, sep = ".")
+  siga.df = siga.df[, (nm3) := shift(.SD, 2), by=playerID, .SDcols=nm1]       # 2년전 데이터 추가
+  siga.df = subset(siga.df, select=-playerID)
+  siga.df_pre = na.omit(siga.df)                          # NA값 제거
+  write.csv(siga.df_pre, 'df6.csv')
+
+  detach(df_basic)
+  detach(lFinal_df_last_)
+  return(siga.df_pre)
+}
 
 
 ndf1 = make_add_col.fun(df)              # 추가지표 추가   ===(선수 이름 포함)===
