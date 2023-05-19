@@ -17,7 +17,7 @@ head(removed_name_df)
 
 
 # [함수1] 논문 추가지표 생성 함수
-make_add_col.fun = function(DF){
+make_DF1.fun = function(DF){
   df = DF
   # *** 추가지표 계산 ***
   attach(df)
@@ -38,9 +38,9 @@ make_add_col.fun = function(DF){
   
   # ***새로 대입한 값 이상치 처리***
   # Inf 값은 3분위수로 채움 -> (최대값으로 넣어도 괜찮음)
-  t1 = quantile(df1$WHIP, 0.75, na.rm=T)
-  t2 = quantile(df1$FIP, 0.75, na.rm=T)
-  t3 = quantile(df1$ERC, 0.75, na.rm=T)
+  t1 = quantile(df$WHIP, 0.75, na.rm=T)
+  t2 = quantile(df$FIP, 0.75, na.rm=T)
+  t3 = quantile(df$ERC, 0.75, na.rm=T)
   # WHIP, FIP, ERC는 모두 IPouts = 0 인 사람으로 인해 발생한 문제!! -> t1, t2, t3로 대체
   df[df$WHIP == Inf, c("yearID", "l_IPouts")]
   df[df$WHIP == Inf, "WHIP"] = t1
@@ -73,11 +73,11 @@ make_DF2.fun = function(unamed_DF){
   return(data2)
 }
 
-
-
 # [함수3] 필요 없는 변수 제거 + 변수별 전처리 (이름 없는 DF 대입)
-make_basicDF.fun = function(DF){
-  df = DF
+make_DF5.fun = function(DF){
+  df = subset(DF, select = -playerID)
+  playerID = subset(DF, select = playerID)
+  
   attach(df)
   # (1) 중간계투로 던진 경기 추가 -> 총 경기수 제거
   df$l_GM = l_G - l_GS   
@@ -97,29 +97,26 @@ make_basicDF.fun = function(DF){
   # (4) 쓸모 없음 or 수정한 열 제거
   df = subset(df, select = -c(lgID, divID, G, l_G, attendance, debut, birthYear, birthCountry, teamID, throws, stint)) 
   
-  # (5) 원핫 인코딩 진행  -> teamID, throws, stint
+  # (5) 원핫 인코딩 진행  -> teamID, throws
   df$teamID = as.factor(teamID)
   df$throws = as.factor(throws)
-  df$stint = as.factor(stint)
   df = as.data.frame(dummyVars(~., data = df) %>% predict(newdata= df))
   detach(df)
   
+  # 선수 이름 다시 합치기
+  df = cbind(df, playerID)
+  
   return(df)
 }
-
-
-# 변수선택법 적용 DF 추가 필요
 
 
 # 시계열 DF 생성 함수 추가 필요
 library(plyr)
 library(data.table)
 
-make_DF6.fun = function(df_basic, lFinal_df_last_){
+make_DF6.fun = function(df_basic){
   attach(df_basic)
-  attach(lFinal_df_last_)
-
-  AAA.df = cbind(df_basic, lFinal_df_last_[,'playerID'])
+  AAA.df = df_basic
   nm1 = c('WHIP', 'FIP', 'ERC', 'ERAP', 'kwERA', 'BSR', 'round', 'Rank', 'attendance.f','l_GM','salary')
   nm2 = paste("b1", nm1, sep = ".")                       
   setDT(AAA.df)  
@@ -127,30 +124,39 @@ make_DF6.fun = function(df_basic, lFinal_df_last_){
   
   nm3 = paste("b2", nm1, sep = ".")
   siga.df = siga.df[, (nm3) := shift(.SD, 2), by=playerID, .SDcols=nm1]       # 2년전 데이터 추가
-  siga.df = subset(siga.df, select=-playerID)
   siga.df_pre = na.omit(siga.df)                          # NA값 제거
-  write.csv(siga.df_pre, 'df6.csv')
-
   detach(df_basic)
-  detach(lFinal_df_last_)
+  
   return(siga.df_pre)
 }
 
+# 상관계수 0.24 이하 변수 모두 제거
+make_DF7.fun = function(df){
+  # 'playerID' 열을 제외한 데이터프레임 생성
+  original_df = subset(df, select = -playerID)
+  # 상관계수 계산
+  cor_df = as.data.frame(cor(original_df))
+  hcor_df = subset(cor_df, select = salary, salary >= 0.24)
+  hcor_colnames = rownames(hcor_df)
+  df7 = subset(df, select = hcor_colnames)
+  df7$playerID = df$playerID
+  return(df7)
+}
 
-ndf1 = make_add_col.fun(df)              # 추가지표 추가   ===(선수 이름 포함)===
-ndf2 = make_DF2.fun(removed_name_df)     # 범주형 변수 모두 원핫 인코딩
-ndf5 = make_basicDF.fun(removed_name_df) # 변수 제거 및 변수 전처리
 
-# 지금까지의 기본 DF (변수제거 + 변수 전처리 + 추가지표 추가)
-basic_DF = make_basicDF.fun(ndf1[-1])
+df1 = make_DF1.fun(df)              # 추가지표 추가   ===(선수 이름 포함)===
+df5 = make_DF5.fun(df)              # 기본 처리 DF
+df_basic = make_DF5.fun(df1)        # basic (DF1 + DF5)
+df6 = make_DF6.fun(df_basic)        # 시계열 처리 DF
+df7 = make_DF7.fun(df6)
 
 
 setwd("D:/R/데이터마이닝/baseball_project/R")
 # 최종 DF 확인
-write.csv(ndf1, 'Data_pre/df1.csv')
-write.csv(ndf2, 'Data_pre/df2.csv')
-write.csv(ndf5, 'Data_pre/df5.csv')
-write.csv(basic_DF, 'Data_pre/df_basic.csv')
+write.csv(df1, 'Data_pre/df1.csv')
+write.csv(df5, 'Data_pre/df5.csv')
+write.csv(df_basic, 'Data_pre/df_basic.csv')
+write.csv(df6, 'Data_pre/df6.csv')
 
 summary(df$salary)
 
