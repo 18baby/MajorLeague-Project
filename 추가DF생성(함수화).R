@@ -117,7 +117,7 @@ library(data.table)
 make_DF6.fun = function(df_basic){
   attach(df_basic)
   AAA.df = df_basic
-  nm1 = c('WHIP', 'FIP', 'ERC', 'ERAP', 'kwERA', 'BSR', 'round', 'Rank', 'attendance.f','l_GM','salary')
+  nm1 = c('WHIP', 'FIP', 'ERC', 'ERAP', 'kwERA', 'BSR', 'round', 'Rank', 'attendance.f','l_GM')
   nm2 = paste("b1", nm1, sep = ".")                       
   setDT(AAA.df)  
   siga.df = AAA.df[, (nm2) := shift(.SD), by=playerID, .SDcols=nm1]           # 1년전 데이터 추가
@@ -130,7 +130,7 @@ make_DF6.fun = function(df_basic){
   return(siga.df_pre)
 }
 
-# 상관계수 0.24 이하 변수 모두 제거
+# 상관계수 0.24 이상 변수 모두 제거
 make_DF7.fun = function(df){
   # 'playerID' 열을 제외한 데이터프레임 생성
   original_df = subset(df, select = -playerID)
@@ -150,6 +150,10 @@ df_basic = make_DF5.fun(df1)        # basic (DF1 + DF5)
 df6 = make_DF6.fun(df_basic)        # 시계열 처리 DF
 df7 = make_DF7.fun(df6)
 
+df5 = subset(df5, select = -playerID)
+df_basic = subset(df_basic, select = -playerID)
+df6 = subset(df6, select = -playerID)
+df7 = subset(df7, select = -playerID)
 
 setwd("D:/R/데이터마이닝/baseball_project/R")
 # 최종 DF 확인
@@ -157,7 +161,7 @@ write.csv(df1, 'Data_pre/df1.csv')
 write.csv(df5, 'Data_pre/df5.csv')
 write.csv(df_basic, 'Data_pre/df_basic.csv')
 write.csv(df6, 'Data_pre/df6.csv')
-
+write.csv(df7, 'Data_pre/df7.csv')
 summary(df$salary)
 
 
