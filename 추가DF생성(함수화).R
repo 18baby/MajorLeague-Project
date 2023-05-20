@@ -136,7 +136,7 @@ make_DF7.fun = function(df){
   original_df = subset(df, select = -playerID)
   # 상관계수 계산
   cor_df = as.data.frame(cor(original_df))
-  hcor_df = subset(cor_df, select = salary, salary >= 0.24)
+  hcor_df = subset(cor_df, select = salary, abs(salary) >= 0.2)
   hcor_colnames = rownames(hcor_df)
   df7 = subset(df, select = hcor_colnames)
   df7$playerID = df$playerID
