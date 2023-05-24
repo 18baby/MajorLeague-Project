@@ -130,6 +130,29 @@ make_DF6.fun = function(df_basic){
   return(siga.df_pre)
 }
 
+# DFT (teamID : one-hot encoding -> mean target Encoding) 
+make_DFT.fun = function(lFinal_df_last_) {
+  lFinal_ex = lFinal_df_last_
+  lFinal_e = lFinal_ex %>% group_by(yearID, teamID) %>%  summarise(salary.n = mean(salary))
+  lFinal.df = left_join( lFinal_ex, lFinal_e, by=c('yearID', 'teamID'), multiple = "all")    # 1998년~2022년 모든 투수 데이터
+  lFinal.df$salary.c = lFinal.df$salary-lFinal.df$salary.n
+  boxplot(lFinal.df$salary.c)
+  lFinal.df = subset(lFinal.df, select = -c(salary.c))
+  lFinal.df = subset(lFinal.df, select = -c(teamID))
+  lFinal.df = subset(lFinal.df, select = -c(stint))
+  
+  mydata = lFinal.df
+  str(mydata)
+  names(mydata)
+  df=mydata[,-1:-2]
+  df = mydata
+  names(df)
+  names(df5)
+  
+}
+
+
+
 # 상관계수 0.24 이상 변수 모두 제거
 make_DF7.fun = function(df){
   # 'playerID' 열을 제외한 데이터프레임 생성
