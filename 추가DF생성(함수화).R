@@ -14,7 +14,7 @@ df = lFinal_df_last_[-1]        # 기존 데이터(이름 포함)
 removed_name_df = df[, -1]      # 이름 제거한 기존 데이터
 head(df)
 head(removed_name_df)
-
+player_name = df["playerID"]
 
 # [함수1] 논문 추가지표 생성 함수
 make_DF1.fun = function(DF){
@@ -110,14 +110,14 @@ make_DF5.fun = function(DF){
 }
 
 
-# 시계열 DF 생성 함수 추가 필요
+# [함수4] 시계열 처리함수
 library(plyr)
 library(data.table)
 
 make_DF6.fun = function(df_basic){
   attach(df_basic)
   AAA.df = df_basic
-  nm1 = c('WHIP', 'FIP', 'ERC', 'ERAP', 'kwERA', 'BSR', 'round', 'Rank', 'attendance.f','l_GM')
+  nm1 = c('l_W', 'l_GS', 'l_GM', 'l_CG', 'l_ER', 'l_IPouts', 'l_H', 'l_HR', 'l_BB','l_SO', 'BSR')  # 시계열 처리 변수
   nm2 = paste("b1", nm1, sep = ".")                       
   setDT(AAA.df)  
   siga.df = AAA.df[, (nm2) := shift(.SD), by=playerID, .SDcols=nm1]           # 1년전 데이터 추가
@@ -130,53 +130,35 @@ make_DF6.fun = function(df_basic){
   return(siga.df_pre)
 }
 
-# DFT (teamID : one-hot encoding -> mean target Encoding) 
-make_DFT.fun = function(lFinal_df_last_) {
-  lFinal_ex = lFinal_df_last_
-  lFinal_e = lFinal_ex %>% group_by(yearID, teamID) %>%  summarise(salary.n = mean(salary))
-  lFinal.df = left_join( lFinal_ex, lFinal_e, by=c('yearID', 'teamID'), multiple = "all")    # 1998년~2022년 모든 투수 데이터
-  lFinal.df$salary.c = lFinal.df$salary-lFinal.df$salary.n
-  boxplot(lFinal.df$salary.c)
-  lFinal.df = subset(lFinal.df, select = -c(salary.c))
-  lFinal.df = subset(lFinal.df, select = -c(teamID))
-  lFinal.df = subset(lFinal.df, select = -c(stint))
-  
-  mydata = lFinal.df
-  str(mydata)
-  names(mydata)
-  df=mydata[,-1:-2]
-  df = mydata
-  names(df)
-  names(df5)
-  
-}
-
-
-
-# 상관계수 0.24 이상 변수 모두 제거
+# [함수5] 상관계수 0.24 이상 변수 모두 제거
 make_DF7.fun = function(df){
-  # 'playerID' 열을 제외한 데이터프레임 생성
-  original_df = subset(df, select = -playerID)
   # 상관계수 계산
   cor_df = as.data.frame(cor(original_df))
   hcor_df = subset(cor_df, select = salary, abs(salary) >= 0.2)
   hcor_colnames = rownames(hcor_df)
   df7 = subset(df, select = hcor_colnames)
-  df7$playerID = df$playerID
   return(df7)
 }
+
 
 
 df1 = make_DF1.fun(df)              # 추가지표 추가   ===(선수 이름 포함)===
 df5 = make_DF5.fun(df)              # 기본 처리 DF
 df_basic = make_DF5.fun(df1)        # basic (DF1 + DF5)
-df6 = make_DF6.fun(df_basic)        # 시계열 처리 DF
-df7 = make_DF7.fun(df6)
+
+dfT = dfT[-1]                       # team별 전년도 총연봉합 추가
+team_salary = dfT[, "salary.n"]
+dfT = cbind(df_basic, team_salary)
+nm1 = grep("^teamID", colnames(dfT), value = TRUE)
+dfT = dfT[, !names(dfT) %in% c(nm1)]
+
+df6 = make_DF6.fun(dfT)        # 시계열 처리 DF
+
 
 df5 = subset(df5, select = -playerID)
 df_basic = subset(df_basic, select = -playerID)
 df6 = subset(df6, select = -playerID)
-df7 = subset(df7, select = -playerID)
+dfT = subset(dfT, select = -playerID)
 
 setwd("D:/R/데이터마이닝/baseball_project/R")
 # 최종 DF 확인
@@ -184,7 +166,7 @@ write.csv(df1, 'Data_pre/df1.csv')
 write.csv(df5, 'Data_pre/df5.csv')
 write.csv(df_basic, 'Data_pre/df_basic.csv')
 write.csv(df6, 'Data_pre/df6.csv')
-write.csv(df7, 'Data_pre/df7.csv')
+write.csv(dfT, 'Data_pre/dfT.csv')
 summary(df$salary)
 
 
